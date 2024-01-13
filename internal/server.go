@@ -58,9 +58,15 @@ func RunAsServer() {
 			return
 		}
 
+		contentType := r.Header.Get("Content-type")
+		if strings.TrimSpace(contentType) != "text/vnd.graphviz" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "Unable to load request body.", http.StatusBadRequest)
+			http.Error(w, "Unable to load request body", http.StatusBadRequest)
 			return
 		}
 		defer r.Body.Close()
@@ -193,7 +199,7 @@ func worker(jobs chan Job, wg *sync.WaitGroup) {
 		if memory > 1024*1024*50 {
 			lastPID := worker.cmd.Process.Pid
 			startNewWorkerProcess(&worker)
-			slog.Info(fmt.Sprintf("Worker %d was replaced by %d due to excessive memory usage", lastPID, worker.cmd.Process.Pid))
+			slog.Warn(fmt.Sprintf("Worker %d was replaced by %d due to excessive memory usage", lastPID, worker.cmd.Process.Pid))
 		}
 	}
 
