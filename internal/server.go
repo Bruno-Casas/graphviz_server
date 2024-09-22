@@ -98,6 +98,39 @@ func RunAsServer() {
 		close(done)
 	})
 
+	http.HandleFunc("/api/v1/healthcheck", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		done := make(chan bool)
+		ab := func(data *string, err error) {
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if strings.TrimSpace(*data) == "" || !strings.Contains(*data, "I am fine") {
+				http.Error(w, "An unknown error occurred while processing dot", http.StatusInternalServerError)
+				return
+			}
+
+			fmt.Fprint(w, *data)
+		}
+
+		data := string("digraph healthcheck {node [shape=plaintext]; message [label=\"I am fine\"];}")
+
+		jobs <- Job{
+			data:     &data,
+			callback: &ab,
+			done:     &done,
+		}
+
+		<-done
+		close(done)
+	})
+
 	server := &http.Server{}
 
 	go func() {
